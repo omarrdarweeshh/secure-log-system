@@ -1,0 +1,7 @@
+# Never commit these
+.env
+*.pyc
+__pycache__/
+.DS_Store
+*.pem
+*.key
