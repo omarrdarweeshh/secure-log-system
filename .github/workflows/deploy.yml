@@ -8,17 +8,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESSKEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESSKEY }}
-          aws-region: eu-north-1
-
-      - name: Deploy via SSM
-        run: |
-          aws ssm send-command \
-            --instance-id ${{ secrets.EC2_INSTANCE_ID }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["cd /home/ubuntu/secure-log-system && git pull origin main && docker build -t log-system . && docker stop log-system || true && docker rm log-system || true && docker run -d -p 5000:5000 -e AWS_REGION=eu-north-1 -e S3_BUCKET=secure-log-system-bucket -e CW_LOG_GROUP=/secure-log-system -e CW_LOG_STREAM=app-logs --name log-system log-system"]' \
-            --region eu-north-1
+          host: 16.170.225.54
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/secure-log-system
+            git pull origin main
+            docker build -t log-system .
+            docker stop log-system || true
+            docker rm log-system || true
+            docker run -d -p 5000:5000 \
+              -e AWS_REGION=eu-north-1 \
+              -e S3_BUCKET=secure-log-system-bucket \
+              -e CW_LOG_GROUP=/secure-log-system \
+              -e CW_LOG_STREAM=app-logs \
+              --name log-system \
+              log-system
